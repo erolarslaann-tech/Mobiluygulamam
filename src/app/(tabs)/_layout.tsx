@@ -37,6 +37,15 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon emoji="🎉" focused={focused} />,
         }}
       />
+      {user.role === 'admin' ? (
+        <Tabs.Screen
+          name="yonetim"
+          options={{
+            title: 'Yönetim',
+            tabBarIcon: ({ focused }) => <TabIcon emoji="🛠️" focused={focused} />,
+          }}
+        />
+      ) : null}
       <Tabs.Screen
         name="profil"
         options={{

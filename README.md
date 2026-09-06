@@ -1,8 +1,11 @@
 # Köyüm
 
-Köy halkı ile muhtarı buluşturan bir topluluk uygulaması. Muhtar resmi
-duyurular paylaşır, köylüler düğün/mevlit/cenaze gibi önemli günleri ve
-davetleri paylaşır; herkes beğeni ve yorum ile etkileşime girebilir.
+Köy halkı ile muhtarı buluşturan bir topluluk uygulaması. Uygulama
+kimsenin değil, **uygulama sahibinin (admin)** kontrolündedir: admin
+kullanıcılara "Muhtar" gibi unvanlar verir/geri alır. Unvanı "Muhtar"
+olan kişi resmi duyurular paylaşır, köylüler düğün/mevlit/cenaze gibi
+önemli günleri ve davetleri paylaşır; herkes beğeni ve yorum ile
+etkileşime girebilir.
 
 React Native + Expo (expo-router) ile TypeScript kullanılarak geliştirildi.
 
@@ -15,21 +18,39 @@ npm run android
 npm run ios
 ```
 
+## Yetki modeli: admin, unvan, köylü
+
+- **Admin (uygulama sahibi):** Tek yetki kaynağı budur. "Yönetim"
+  sekmesinden herhangi bir kullanıcıya unvan (ör. Muhtar, İmam, Köy
+  Azası) verebilir veya geri alabilir. Admin hesabı kayıt ekranından
+  oluşturulamaz, yalnızca seed veride var.
+- **Unvan:** Admin'in bir kullanıcıya verdiği etikettir, bir "rol"
+  değildir — sadece admin atar/kaldırır. Yalnızca **"Muhtar"** unvanı
+  resmi duyuru paylaşma yetkisi verir; diğer unvanlar (İmam, Köy Azası,
+  Bekçi vb.) profilde görünen birer etikettir, ek yetki taşımaz.
+- **Köylü:** Unvansız her kayıtlı kullanıcı. "Kayıt Ol" ekranından
+  telefon numarası + şifre ile herkes köylü olarak katılabilir; etkinlik/
+  davet paylaşabilir, beğeni/yorum yapabilir.
+
 ## Demo hesaplar
 
-Uygulama ilk açıldığında iki demo hesap otomatik oluşturulur:
+Uygulama ilk açıldığında üç demo hesap otomatik oluşturulur:
 
-- **Muhtar:** `5550000000` / `muhtar123`
-- **Köylü:** `5551111111` / `123456`
+- **Uygulama Sahibi (admin):** `5559999999` / `admin123`
+- **Muhtar unvanlı köylü:** `5550000000` / `muhtar123`
+- **Sade köylü:** `5551111111` / `123456`
 
-Yeni köylüler "Kayıt Ol" ekranından telefon numarası + şifre ile kendi
-hesaplarını oluşturabilir. Muhtar rolü güvenlik amacıyla self-servis
-kayıttan atanmaz; şu an için sadece seed hesapla geliyor.
+> ⚠️ Bu şifreler sadece demo/geliştirme amaçlıdır ve `src/services/storage.ts`
+> içinde açık metin olarak duruyor (gerçek bir backend olmadığı için basit
+> tutuldu). Gerçek kullanıcılarla paylaşmadan önce mutlaka admin şifresini
+> değiştirin ve backend'e geçtiğinizde düzgün bir kimlik doğrulama (hash'li
+> şifre, vb.) kurun.
 
 ## Mevcut özellikler (MVP)
 
 - Telefon numarası + şifre ile giriş / kayıt
-- Muhtar duyuruları (Duyurular sekmesi) — sadece muhtar ekleyebilir
+- Admin'e özel "Yönetim" sekmesi: kullanıcılara unvan verme/kaldırma
+- Muhtar unvanlı kişinin duyuruları (Duyurular sekmesi)
 - Etkinlik / davet paylaşımı (Etkinlikler sekmesi) — herkes ekleyebilir
 - Gönderilere beğeni ve yorum
 - Yeni bir duyuru paylaşıldığında cihazda anlık bildirim
@@ -53,8 +74,8 @@ Uygulamanın gerçek anlamda köy genelinde çalışması için bir sonraki adı
    içindeki fonksiyonları bu gerçek backend'e bağlamak — ekranların
    kendisi değişmeden kalabilir, çünkü tüm veri erişimi bu iki dosya
    üzerinden yapılıyor.
-3. Muhtarın paylaştığı her duyuru için, sunucudan kayıtlı tüm köylülerin
-   push token'larına bildirim göndermek.
+3. Muhtar unvanlı kişinin paylaştığı her duyuru için, sunucudan kayıtlı
+   tüm köylülerin push token'larına bildirim göndermek.
 
 ## Proje yapısı
 
@@ -62,11 +83,12 @@ Uygulamanın gerçek anlamda köy genelinde çalışması için bir sonraki adı
 src/
   app/            expo-router ekranları (dosya tabanlı yönlendirme)
     login.tsx, register.tsx
-    (tabs)/       Duyurular, Etkinlikler, Profil sekmeleri
+    (tabs)/       Duyurular, Etkinlikler, Yönetim (sadece admin), Profil
     post/[id].tsx Gönderi detayı (beğeni + yorumlar)
     post/new.tsx  Yeni duyuru/etkinlik ekleme formu
-  context/        AuthContext (oturum), PostsContext (gönderi/yorum state)
+  context/        AuthContext (oturum + kullanıcı/unvan yönetimi), PostsContext
   services/       storage.ts (yerel veri), notifications.ts (bildirimler)
+  utils/          yetki.ts (kim duyuru paylaşabilir mantığı)
   components/     PostCard, RoleBadge
   types/          Ortak TypeScript tipleri
 ```

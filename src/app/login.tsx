@@ -80,8 +80,9 @@ export default function LoginScreen() {
 
           <View style={styles.demoKutu}>
             <Text style={styles.demoBaslik}>Demo hesaplar</Text>
-            <Text style={styles.demoText}>Muhtar: 5550000000 / muhtar123</Text>
-            <Text style={styles.demoText}>Köylü: 5551111111 / 123456</Text>
+            <Text style={styles.demoText}>Uygulama Sahibi (admin): 5559999999 / admin123</Text>
+            <Text style={styles.demoText}>Muhtar unvanlı köylü: 5550000000 / muhtar123</Text>
+            <Text style={styles.demoText}>Sade köylü: 5551111111 / 123456</Text>
           </View>
         </View>
       </KeyboardAvoidingView>

@@ -16,6 +16,7 @@ import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/context/PostsContext';
 import type { PostType } from '@/types';
+import { canPostDuyuru } from '@/utils/yetki';
 
 export default function YeniPaylasimScreen() {
   const { type } = useLocalSearchParams<{ type?: PostType }>();
@@ -33,10 +34,13 @@ export default function YeniPaylasimScreen() {
 
   if (!user) return null;
 
-  if (postType === 'duyuru' && user.role !== 'muhtar') {
+  if (postType === 'duyuru' && !canPostDuyuru(user)) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Text style={styles.yetkiYok}>Yalnızca muhtar duyuru paylaşabilir.</Text>
+        <Text style={styles.yetkiYok}>
+          Duyuru paylaşmak için uygulama sahibinin size "Muhtar" unvanı
+          vermesi gerekir.
+        </Text>
       </SafeAreaView>
     );
   }

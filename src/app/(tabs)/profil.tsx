@@ -33,13 +33,22 @@ export default function ProfilScreen() {
         </View>
 
         <Text style={styles.adSoyad}>{user.adSoyad}</Text>
-        <RoleBadge role={user.role} />
+        <RoleBadge role={user.role} unvan={user.unvan} />
         <Text style={styles.telefon}>{user.telefon}</Text>
 
-        {user.role === 'muhtar' ? (
+        {user.role === 'admin' ? (
           <View style={styles.bilgiKutu}>
             <Text style={styles.bilgiText}>
-              Muhtar olarak "Duyurular" sekmesinden köy geneline resmi duyuru
+              Uygulamanın sahibisiniz. "Yönetim" sekmesinden köylülere Muhtar
+              gibi unvanlar verip geri alabilirsiniz. Unvan verdiğiniz kişi
+              "Duyurular" sekmesinden köy geneline resmi duyuru paylaşabilir.
+            </Text>
+          </View>
+        ) : user.unvan ? (
+          <View style={styles.bilgiKutu}>
+            <Text style={styles.bilgiText}>
+              Uygulama sahibi tarafından size "{user.unvan}" unvanı verildi.
+              "Duyurular" sekmesinden köy geneline resmi duyuru
               paylaşabilirsiniz. Paylaştığınızda köylülere bildirim gider.
             </Text>
           </View>

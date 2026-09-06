@@ -3,10 +3,12 @@ import type { PropsWithChildren } from 'react';
 
 import { registerForPushNotificationsAsync } from '@/services/notifications';
 import { ensureSeedData, sessionStore, usersStore } from '@/services/storage';
-import type { Role, User } from '@/types';
+import type { User } from '@/types';
 
 interface AuthContextValue {
   user: User | null;
+  /** Tüm kullanıcılar — yalnızca admin ekranında unvan atamak için kullanılır. */
+  users: User[];
   loading: boolean;
   login: (telefon: string, sifre: string) => Promise<{ ok: boolean; hata?: string }>;
   register: (
@@ -15,6 +17,8 @@ interface AuthContextValue {
     sifre: string
   ) => Promise<{ ok: boolean; hata?: string }>;
   logout: () => Promise<void>;
+  /** Sadece admin çağırmalı: bir kullanıcıya unvan verir/kaldırır (boş = unvanı kaldır). */
+  setUnvan: (userId: string, unvan: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -25,15 +29,17 @@ function normalizeTelefon(telefon: string) {
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       await ensureSeedData();
+      const allUsers = await usersStore.getAll();
+      setUsers(allUsers);
       const userId = await sessionStore.getUserId();
       if (userId) {
-        const users = await usersStore.getAll();
-        const found = users.find((u) => u.id === userId) ?? null;
+        const found = allUsers.find((u) => u.id === userId) ?? null;
         setUser(found);
       }
       setLoading(false);
@@ -41,12 +47,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, []);
 
   const login: AuthContextValue['login'] = async (telefon, sifre) => {
-    const users = await usersStore.getAll();
+    const allUsers = await usersStore.getAll();
     const tel = normalizeTelefon(telefon);
-    const found = users.find((u) => u.telefon === tel);
+    const found = allUsers.find((u) => u.telefon === tel);
     if (!found || found.sifre !== sifre) {
       return { ok: false, hata: 'Telefon numarası veya şifre hatalı.' };
     }
+    setUsers(allUsers);
     await sessionStore.setUserId(found.id);
     setUser(found);
     registerForPushNotificationsAsync().then(async (token) => {
@@ -54,6 +61,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const all = await usersStore.getAll();
       const updated = all.map((u) => (u.id === found.id ? { ...u, pushToken: token } : u));
       await usersStore.saveAll(updated);
+      setUsers(updated);
     });
     return { ok: true };
   };
@@ -66,19 +74,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (sifre.length < 4) {
       return { ok: false, hata: 'Şifre en az 4 karakter olmalı.' };
     }
-    const users = await usersStore.getAll();
-    if (users.some((u) => u.telefon === tel)) {
+    const allUsers = await usersStore.getAll();
+    if (allUsers.some((u) => u.telefon === tel)) {
       return { ok: false, hata: 'Bu telefon numarası zaten kayıtlı.' };
     }
-    const role: Role = 'koylu';
+    // Kayıt olan herkes sade "kullanıcı"dır. Unvan (Muhtar dahil) yalnızca
+    // admin tarafından, uygulama içinden sonradan atanır.
     const newUser: User = {
       id: `user-${Date.now()}`,
       adSoyad: adSoyad.trim(),
       telefon: tel,
       sifre,
-      role,
+      role: 'kullanici',
     };
-    await usersStore.saveAll([...users, newUser]);
+    const updated = [...allUsers, newUser];
+    await usersStore.saveAll(updated);
+    setUsers(updated);
     await sessionStore.setUserId(newUser.id);
     setUser(newUser);
     return { ok: true };
@@ -89,9 +100,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setUser(null);
   };
 
+  const setUnvan: AuthContextValue['setUnvan'] = async (userId, unvan) => {
+    const allUsers = await usersStore.getAll();
+    const updated = allUsers.map((u) =>
+      u.id === userId ? { ...u, unvan: unvan.trim() || undefined } : u
+    );
+    await usersStore.saveAll(updated);
+    setUsers(updated);
+    setUser((current) => {
+      if (!current || current.id !== userId) return current;
+      const yeni = updated.find((u) => u.id === userId) ?? current;
+      return yeni;
+    });
+  };
+
   const value = useMemo(
-    () => ({ user, loading, login, register, logout }),
-    [user, loading]
+    () => ({ user, users, loading, login, register, logout, setUnvan }),
+    [user, users, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

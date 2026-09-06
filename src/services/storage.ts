@@ -52,6 +52,7 @@ export const sessionStore = {
   clear: () => AsyncStorage.removeItem(KEYS.session),
 };
 
+const SEED_ADMIN_ID = 'seed-admin';
 const SEED_MUHTAR_ID = 'seed-muhtar';
 
 export async function ensureSeedData() {
@@ -62,18 +63,26 @@ export async function ensureSeedData() {
 
   const seedUsers: User[] = [
     {
+      id: SEED_ADMIN_ID,
+      adSoyad: 'Uygulama Sahibi',
+      telefon: '5559999999',
+      sifre: 'admin123',
+      role: 'admin',
+    },
+    {
       id: SEED_MUHTAR_ID,
-      adSoyad: 'Muhtar Ahmet Yılmaz',
+      adSoyad: 'Ahmet Yılmaz',
       telefon: '5550000000',
       sifre: 'muhtar123',
-      role: 'muhtar',
+      role: 'kullanici',
+      unvan: 'Muhtar',
     },
     {
       id: 'seed-koylu-1',
       adSoyad: 'Ayşe Demir',
       telefon: '5551111111',
       sifre: '123456',
-      role: 'koylu',
+      role: 'kullanici',
     },
   ];
 
@@ -85,7 +94,7 @@ export async function ensureSeedData() {
       icerik:
         'Yarın 09:00-13:00 arası köy geneli içme suyu bakım çalışması nedeniyle su kesintisi olacaktır. Anlayışınız için teşekkür ederiz.',
       yazanId: SEED_MUHTAR_ID,
-      yazanAdSoyad: 'Muhtar Ahmet Yılmaz',
+      yazanAdSoyad: 'Ahmet Yılmaz',
       begenenler: [],
       createdAt: now,
     },

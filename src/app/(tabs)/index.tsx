@@ -6,6 +6,7 @@ import { PostCard } from '@/components/PostCard';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/context/PostsContext';
+import { canPostDuyuru } from '@/utils/yetki';
 
 export default function DuyurularScreen() {
   const { user } = useAuth();
@@ -33,7 +34,7 @@ export default function DuyurularScreen() {
         }
       />
 
-      {user?.role === 'muhtar' ? (
+      {canPostDuyuru(user) ? (
         <Pressable
           style={styles.fab}
           onPress={() => router.push({ pathname: '/post/new', params: { type: 'duyuru' } })}>
