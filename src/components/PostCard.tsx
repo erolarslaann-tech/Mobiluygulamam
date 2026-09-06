@@ -15,7 +15,7 @@ export function PostCard({ post, yorumSayisi }: { post: Post; yorumSayisi: numbe
       <Pressable style={styles.card}>
         <View style={styles.headerRow}>
           <View style={[styles.pill, post.type === 'duyuru' ? styles.pillDuyuru : styles.pillEtkinlik]}>
-            <Text style={styles.pillText}>{post.type === 'duyuru' ? 'DUYURU' : 'ETKİNLİK'}</Text>
+            <Text style={styles.pillText}>{post.type === 'duyuru' ? 'DUYURU' : 'DAVETİYE'}</Text>
           </View>
           <Text style={styles.tarih}>{formatTarih(post.createdAt)}</Text>
         </View>

@@ -26,7 +26,7 @@ export default function EtkinliklerScreen() {
           !loading ? (
             <View style={styles.bosDurum}>
               <Text style={styles.bosText}>
-                Henüz paylaşılan bir etkinlik/davet yok. İlkini sen ekle!
+                Henüz paylaşılan bir davetiye yok. İlkini sen ekle!
               </Text>
             </View>
           ) : null
@@ -36,7 +36,7 @@ export default function EtkinliklerScreen() {
       <Pressable
         style={styles.fab}
         onPress={() => router.push({ pathname: '/post/new', params: { type: 'etkinlik' } })}>
-        <Text style={styles.fabText}>+ Etkinlik/Davet Ekle</Text>
+        <Text style={styles.fabText}>+ Davetiye Ekle</Text>
       </Pressable>
     </SafeAreaView>
   );
@@ -77,5 +77,6 @@ const styles = StyleSheet.create({
   fabText: {
     color: '#fff',
     fontWeight: '700',
+    fontSize: 16,
   },
 });

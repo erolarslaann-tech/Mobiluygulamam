@@ -34,7 +34,10 @@ export default function ProfilScreen() {
 
         <Text style={styles.adSoyad}>{user.adSoyad}</Text>
         <RoleBadge role={user.role} unvan={user.unvan} />
-        <Text style={styles.telefon}>{user.telefon}</Text>
+        <Text style={styles.detay}>
+          Yaş: {user.yas}
+          {user.babaAdi ? `  ·  Baba Adı: ${user.babaAdi}` : ''}
+        </Text>
 
         {user.role === 'admin' ? (
           <View style={styles.bilgiKutu}>
@@ -55,7 +58,7 @@ export default function ProfilScreen() {
         ) : (
           <View style={styles.bilgiKutu}>
             <Text style={styles.bilgiText}>
-              "Etkinlikler" sekmesinden düğün, mevlit, cenaze gibi önemli
+              "Davetiyeler" sekmesinden düğün, mevlit, cenaze gibi önemli
               günleri ve davetleri köy halkıyla paylaşabilirsiniz.
             </Text>
           </View>
@@ -100,8 +103,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text,
   },
-  telefon: {
+  detay: {
     color: Colors.textMuted,
+    fontSize: 14,
     marginBottom: Spacing.md,
   },
   bilgiKutu: {
@@ -114,8 +118,8 @@ const styles = StyleSheet.create({
   },
   bilgiText: {
     color: Colors.text,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 21,
     textAlign: 'center',
   },
   cikisButon: {
@@ -130,5 +134,6 @@ const styles = StyleSheet.create({
   cikisText: {
     color: Colors.danger,
     fontWeight: '700',
+    fontSize: 16,
   },
 });

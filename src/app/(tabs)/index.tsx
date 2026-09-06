@@ -78,5 +78,6 @@ const styles = StyleSheet.create({
   fabText: {
     color: '#fff',
     fontWeight: '700',
+    fontSize: 16,
   },
 });

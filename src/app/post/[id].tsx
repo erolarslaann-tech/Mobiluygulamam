@@ -69,7 +69,7 @@ export default function PostDetayScreen() {
                   post.type === 'duyuru' ? styles.pillDuyuru : styles.pillEtkinlik,
                 ]}>
                 <Text style={styles.pillText}>
-                  {post.type === 'duyuru' ? 'DUYURU' : 'ETKİNLİK'}
+                  {post.type === 'duyuru' ? 'DUYURU' : 'DAVETİYE'}
                 </Text>
               </View>
 

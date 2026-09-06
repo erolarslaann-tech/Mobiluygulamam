@@ -23,7 +23,10 @@ function KullaniciSatiri({
       <View style={styles.satirUst}>
         <View style={styles.flex1}>
           <Text style={styles.adSoyad}>{kullanici.adSoyad}</Text>
-          <Text style={styles.telefon}>{kullanici.telefon}</Text>
+          <Text style={styles.detay}>
+            Yaş: {kullanici.yas}
+            {kullanici.babaAdi ? `  ·  Baba Adı: ${kullanici.babaAdi}` : ''}
+          </Text>
         </View>
         <RoleBadge role={kullanici.role} unvan={kullanici.unvan} />
       </View>
@@ -136,7 +139,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.text,
   },
-  telefon: {
+  detay: {
     color: Colors.textMuted,
     fontSize: 13,
   },

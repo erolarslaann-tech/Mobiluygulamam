@@ -64,15 +64,16 @@ export async function ensureSeedData() {
   const seedUsers: User[] = [
     {
       id: SEED_ADMIN_ID,
-      adSoyad: 'Uygulama Sahibi',
-      telefon: '5559999999',
+      adSoyad: 'Yönetici Hesap',
+      yas: 40,
       sifre: 'admin123',
       role: 'admin',
     },
     {
       id: SEED_MUHTAR_ID,
       adSoyad: 'Ahmet Yılmaz',
-      telefon: '5550000000',
+      yas: 52,
+      babaAdi: 'Mehmet',
       sifre: 'muhtar123',
       role: 'kullanici',
       unvan: 'Muhtar',
@@ -80,7 +81,8 @@ export async function ensureSeedData() {
     {
       id: 'seed-koylu-1',
       adSoyad: 'Ayşe Demir',
-      telefon: '5551111111',
+      yas: 38,
+      babaAdi: 'Hasan',
       sifre: '123456',
       role: 'kullanici',
     },

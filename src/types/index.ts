@@ -9,7 +9,9 @@ export type Role = 'admin' | 'kullanici';
 export interface User {
   id: string;
   adSoyad: string;
-  telefon: string;
+  yas: number;
+  /** Aynı ad soyada sahip başka biri varsa ayırt etmek için. */
+  babaAdi?: string;
   sifre: string;
   role: Role;
   /** Yalnızca admin tarafından atanır/kaldırılır. Boşsa sade köylüdür. */

@@ -5,7 +5,7 @@ export const Colors = {
   background: '#F4F1E9',
   surface: '#FFFFFF',
   text: '#22281F',
-  textMuted: '#6B7263',
+  textMuted: '#565D50',
   border: '#E1DCCB',
   danger: '#B3412D',
 } as const;

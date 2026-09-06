@@ -72,7 +72,7 @@ export default function YeniPaylasimScreen() {
       <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
         <ScrollView contentContainerStyle={styles.container}>
           <Text style={styles.baslikMetni}>
-            {postType === 'duyuru' ? 'Yeni Muhtar Duyurusu' : 'Yeni Etkinlik / Davet'}
+            {postType === 'duyuru' ? 'Yeni Duyuru' : 'Yeni Davetiye'}
           </Text>
 
           <Text style={styles.label}>Başlık</Text>

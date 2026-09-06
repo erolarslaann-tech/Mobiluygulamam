@@ -5,15 +5,24 @@ import { registerForPushNotificationsAsync } from '@/services/notifications';
 import { ensureSeedData, sessionStore, usersStore } from '@/services/storage';
 import type { User } from '@/types';
 
+export type GirisSonucu =
+  | { durum: 'basarili' }
+  | { durum: 'hata'; mesaj: string }
+  | { durum: 'coklu-eslesme'; adaylar: User[] };
+
 interface AuthContextValue {
   user: User | null;
   /** Tüm kullanıcılar — yalnızca admin ekranında unvan atamak için kullanılır. */
   users: User[];
   loading: boolean;
-  login: (telefon: string, sifre: string) => Promise<{ ok: boolean; hata?: string }>;
+  login: (ad: string, soyad: string, sifre: string) => Promise<GirisSonucu>;
+  /** Aynı ad+soyad+şifreye sahip birden fazla kişi çıkarsa, doğru kişiyi seçmek için. */
+  girisSecimiYap: (userId: string) => Promise<void>;
   register: (
-    adSoyad: string,
-    telefon: string,
+    ad: string,
+    soyad: string,
+    yas: number,
+    babaAdi: string,
     sifre: string
   ) => Promise<{ ok: boolean; hata?: string }>;
   logout: () => Promise<void>;
@@ -23,8 +32,8 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function normalizeTelefon(telefon: string) {
-  return telefon.replace(/\D/g, '');
+function normalizeAd(s: string) {
+  return s.trim().replace(/\s+/g, ' ').toLocaleLowerCase('tr-TR');
 }
 
 export function AuthProvider({ children }: PropsWithChildren) {
@@ -46,52 +55,71 @@ export function AuthProvider({ children }: PropsWithChildren) {
     })();
   }, []);
 
-  const login: AuthContextValue['login'] = async (telefon, sifre) => {
-    const allUsers = await usersStore.getAll();
-    const tel = normalizeTelefon(telefon);
-    const found = allUsers.find((u) => u.telefon === tel);
-    if (!found || found.sifre !== sifre) {
-      return { ok: false, hata: 'Telefon numarası veya şifre hatalı.' };
-    }
-    setUsers(allUsers);
-    await sessionStore.setUserId(found.id);
-    setUser(found);
+  const oturumAc = async (secilen: User) => {
+    await sessionStore.setUserId(secilen.id);
+    setUser(secilen);
     registerForPushNotificationsAsync().then(async (token) => {
       if (!token) return;
       const all = await usersStore.getAll();
-      const updated = all.map((u) => (u.id === found.id ? { ...u, pushToken: token } : u));
+      const updated = all.map((u) => (u.id === secilen.id ? { ...u, pushToken: token } : u));
       await usersStore.saveAll(updated);
       setUsers(updated);
     });
-    return { ok: true };
   };
 
-  const register: AuthContextValue['register'] = async (adSoyad, telefon, sifre) => {
-    const tel = normalizeTelefon(telefon);
-    if (tel.length < 10) {
-      return { ok: false, hata: 'Geçerli bir telefon numarası girin.' };
+  const login: AuthContextValue['login'] = async (ad, soyad, sifre) => {
+    if (!ad.trim() || !soyad.trim() || !sifre) {
+      return { durum: 'hata', mesaj: 'Ad, soyisim ve şifre girin.' };
+    }
+    const allUsers = await usersStore.getAll();
+    setUsers(allUsers);
+    const hedef = normalizeAd(`${ad} ${soyad}`);
+    const adaylar = allUsers.filter(
+      (u) => normalizeAd(u.adSoyad) === hedef && u.sifre === sifre
+    );
+
+    if (adaylar.length === 0) {
+      return { durum: 'hata', mesaj: 'Ad, soyisim ya da şifre hatalı.' };
+    }
+    if (adaylar.length === 1) {
+      await oturumAc(adaylar[0]);
+      return { durum: 'basarili' };
+    }
+    return { durum: 'coklu-eslesme', adaylar };
+  };
+
+  const girisSecimiYap: AuthContextValue['girisSecimiYap'] = async (userId) => {
+    const allUsers = await usersStore.getAll();
+    const secilen = allUsers.find((u) => u.id === userId);
+    if (!secilen) return;
+    await oturumAc(secilen);
+  };
+
+  const register: AuthContextValue['register'] = async (ad, soyad, yas, babaAdi, sifre) => {
+    if (!ad.trim() || !soyad.trim()) {
+      return { ok: false, hata: 'Ad ve soyisim girin.' };
+    }
+    if (!Number.isFinite(yas) || yas < 1 || yas > 120) {
+      return { ok: false, hata: 'Geçerli bir yaş girin.' };
     }
     if (sifre.length < 4) {
       return { ok: false, hata: 'Şifre en az 4 karakter olmalı.' };
     }
     const allUsers = await usersStore.getAll();
-    if (allUsers.some((u) => u.telefon === tel)) {
-      return { ok: false, hata: 'Bu telefon numarası zaten kayıtlı.' };
-    }
     // Kayıt olan herkes sade "kullanıcı"dır. Unvan (Muhtar dahil) yalnızca
     // admin tarafından, uygulama içinden sonradan atanır.
     const newUser: User = {
       id: `user-${Date.now()}`,
-      adSoyad: adSoyad.trim(),
-      telefon: tel,
+      adSoyad: `${ad.trim()} ${soyad.trim()}`,
+      yas,
+      babaAdi: babaAdi.trim() || undefined,
       sifre,
       role: 'kullanici',
     };
     const updated = [...allUsers, newUser];
     await usersStore.saveAll(updated);
     setUsers(updated);
-    await sessionStore.setUserId(newUser.id);
-    setUser(newUser);
+    await oturumAc(newUser);
     return { ok: true };
   };
 
@@ -115,7 +143,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   };
 
   const value = useMemo(
-    () => ({ user, users, loading, login, register, logout, setUnvan }),
+    () => ({ user, users, loading, login, girisSecimiYap, register, logout, setUnvan }),
     [user, users, loading]
   );
 

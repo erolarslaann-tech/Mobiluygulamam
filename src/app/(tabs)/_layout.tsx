@@ -33,7 +33,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="etkinlikler"
         options={{
-          title: 'Etkinlikler',
+          title: 'Davetiyeler',
           tabBarIcon: ({ focused }) => <TabIcon emoji="🎉" focused={focused} />,
         }}
       />

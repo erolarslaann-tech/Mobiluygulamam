@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,20 +17,18 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
-  const [adSoyad, setAdSoyad] = useState('');
-  const [telefon, setTelefon] = useState('');
+  const [ad, setAd] = useState('');
+  const [soyad, setSoyad] = useState('');
+  const [yas, setYas] = useState('');
+  const [babaAdi, setBabaAdi] = useState('');
   const [sifre, setSifre] = useState('');
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);
 
   const kayitOl = async () => {
     setHata(null);
-    if (!adSoyad.trim()) {
-      setHata('Ad soyad girin.');
-      return;
-    }
     setGonderiliyor(true);
-    const sonuc = await register(adSoyad, telefon, sifre);
+    const sonuc = await register(ad, soyad, Number(yas), babaAdi, sifre);
     setGonderiliyor(false);
     if (!sonuc.ok) {
       setHata(sonuc.hata ?? 'Kayıt olunamadı.');
@@ -43,27 +42,46 @@ export default function RegisterScreen() {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.aciklama}>
-            Köyümüze hoş geldiniz. Kayıt olduktan sonra köylü olarak duyuruları
-            görebilir, etkinlik/davet paylaşabilir ve yorum yapabilirsiniz.
+            Köyümüze hoş geldiniz. Kayıt olduktan sonra duyuruları görebilir,
+            davetiye/duyuru paylaşabilir ve yorum yapabilirsiniz.
           </Text>
 
-          <Text style={styles.label}>Ad Soyad</Text>
+          <Text style={styles.label}>Adınız</Text>
           <TextInput
-            value={adSoyad}
-            onChangeText={setAdSoyad}
-            placeholder="Adınız Soyadınız"
+            value={ad}
+            onChangeText={setAd}
+            placeholder="Ör: Ahmet"
+            style={styles.input}
+            autoCapitalize="words"
+          />
+
+          <Text style={styles.label}>Soyadınız</Text>
+          <TextInput
+            value={soyad}
+            onChangeText={setSoyad}
+            placeholder="Ör: Yılmaz"
+            style={styles.input}
+            autoCapitalize="words"
+          />
+
+          <Text style={styles.label}>Yaşınız</Text>
+          <TextInput
+            value={yas}
+            onChangeText={setYas}
+            placeholder="Ör: 45"
+            keyboardType="number-pad"
             style={styles.input}
           />
 
-          <Text style={styles.label}>Telefon Numarası</Text>
+          <Text style={styles.label}>Baba Adı (opsiyonel)</Text>
           <TextInput
-            value={telefon}
-            onChangeText={setTelefon}
-            placeholder="05xx xxx xx xx"
-            keyboardType="phone-pad"
+            value={babaAdi}
+            onChangeText={setBabaAdi}
+            placeholder="Köyünüzde aynı isimde biri varsa yazın"
             style={styles.input}
+            autoCapitalize="words"
           />
 
           <Text style={styles.label}>Şifre</Text>
@@ -83,7 +101,7 @@ export default function RegisterScreen() {
             disabled={gonderiliyor}>
             <Text style={styles.butonText}>{gonderiliyor ? 'Kaydediliyor...' : 'Kayıt Ol'}</Text>
           </Pressable>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -98,18 +116,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: Spacing.lg,
     gap: Spacing.sm,
   },
   aciklama: {
     color: Colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 21,
     marginBottom: Spacing.sm,
   },
   label: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: Colors.text,
     marginTop: Spacing.sm,
@@ -120,17 +138,17 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    fontSize: 16,
+    paddingVertical: Spacing.md,
+    fontSize: 18,
   },
   hataText: {
     color: Colors.danger,
-    fontSize: 13,
+    fontSize: 14,
   },
   buton: {
     backgroundColor: Colors.primary,
     borderRadius: Radius.sm,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.md + 2,
     alignItems: 'center',
     marginTop: Spacing.md,
   },
@@ -140,6 +158,6 @@ const styles = StyleSheet.create({
   butonText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: 18,
   },
 });
