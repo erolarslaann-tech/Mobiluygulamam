@@ -1,8 +1,17 @@
+import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 
+import { auth } from '@/services/firebaseConfig';
+import {
+  kullaniciEkle,
+  kullaniciGuncelle,
+  kullaniciSil,
+  kullanicilariDinle,
+} from '@/services/firestoreRepo';
 import { registerForPushNotificationsAsync } from '@/services/notifications';
-import { ensureSeedData, sessionStore, usersStore } from '@/services/storage';
+import { sessionStore } from '@/services/storage';
+import { tohumVeriEkleGerekirse } from '@/services/tohumVeri';
 import type { User } from '@/types';
 
 export type GirisSonucu =
@@ -12,9 +21,10 @@ export type GirisSonucu =
 
 interface AuthContextValue {
   user: User | null;
-  /** Tüm kullanıcılar — yalnızca admin ekranında unvan atamak için kullanılır. */
+  /** Tüm kullanıcılar (onaylı + onay bekleyen) — Firestore ile canlı senkronize. */
   users: User[];
   loading: boolean;
+  baglantiHatasi: string | null;
   login: (ad: string, soyad: string, sifre: string) => Promise<GirisSonucu>;
   /** Aynı ad+soyad+şifreye sahip birden fazla kişi çıkarsa, doğru kişiyi seçmek için. */
   girisSecimiYap: (userId: string) => Promise<void>;
@@ -28,6 +38,10 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   /** Sadece admin çağırmalı: bir kullanıcıya unvan verir/kaldırır (boş = unvanı kaldır). */
   setUnvan: (userId: string, unvan: string) => Promise<void>;
+  /** Sadece admin: onay bekleyen bir kaydı onaylar. */
+  kullaniciOnayla: (userId: string) => Promise<void>;
+  /** Sadece admin: sahte/yanlış bir kaydı tamamen siler. */
+  kullaniciReddet: (userId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -39,31 +53,72 @@ function normalizeAd(s: string) {
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [authHazir, setAuthHazir] = useState(false);
+  const [usersYuklendi, setUsersYuklendi] = useState(false);
+  const [baglantiHatasi, setBaglantiHatasi] = useState<string | null>(null);
 
+  // 1) Firestore güvenlik kuralları "giriş yapmış" (anonim de olsa) istemci
+  // ister; bu yüzden uygulama açılır açılmaz sessizce anonim oturum açılır.
   useEffect(() => {
-    (async () => {
-      await ensureSeedData();
-      const allUsers = await usersStore.getAll();
-      setUsers(allUsers);
-      const userId = await sessionStore.getUserId();
-      if (userId) {
-        const found = allUsers.find((u) => u.id === userId) ?? null;
-        setUser(found);
+    const kaldir = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setAuthHazir(true);
+      } else {
+        signInAnonymously(auth).catch((e) => setBaglantiHatasi(String(e?.message ?? e)));
       }
-      setLoading(false);
-    })();
+    });
+    return kaldir;
   }, []);
+
+  // 2) Anonim oturum hazır olunca: gerekiyorsa demo veriyi ekle, sonra tüm
+  // kullanıcıları canlı dinlemeye başla.
+  useEffect(() => {
+    if (!authHazir) return;
+    let kaldirildi = false;
+
+    tohumVeriEkleGerekirse().catch((e) => setBaglantiHatasi(String(e?.message ?? e)));
+
+    const kaldir = kullanicilariDinle(
+      (allUsers) => {
+        if (kaldirildi) return;
+        setUsers(allUsers);
+        setUsersYuklendi(true);
+      },
+      (e) => setBaglantiHatasi(String(e?.message ?? e))
+    );
+    return () => {
+      kaldirildi = true;
+      kaldir();
+    };
+  }, [authHazir]);
+
+  // 3) Kullanıcı listesi her güncellendiğinde: henüz oturum açılmadıysa bu
+  // cihazda daha önce kim giriş yapmışsa geri yükle; açıksa unvan gibi
+  // bilgileri güncel tut (kullanıcı silinirse oturumu da kapatır).
+  useEffect(() => {
+    if (!usersYuklendi) return;
+    setUser((mevcut) => {
+      if (mevcut) {
+        return users.find((u) => u.id === mevcut.id) ?? null;
+      }
+      return mevcut;
+    });
+    if (!user) {
+      sessionStore.getUserId().then((userId) => {
+        if (!userId) return;
+        const found = users.find((u) => u.id === userId);
+        if (found) setUser(found);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [users, usersYuklendi]);
 
   const oturumAc = async (secilen: User) => {
     await sessionStore.setUserId(secilen.id);
     setUser(secilen);
-    registerForPushNotificationsAsync().then(async (token) => {
+    registerForPushNotificationsAsync().then((token) => {
       if (!token) return;
-      const all = await usersStore.getAll();
-      const updated = all.map((u) => (u.id === secilen.id ? { ...u, pushToken: token } : u));
-      await usersStore.saveAll(updated);
-      setUsers(updated);
+      kullaniciGuncelle(secilen.id, { pushToken: token }).catch(() => {});
     });
   };
 
@@ -71,26 +126,31 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!ad.trim() || !soyad.trim() || !sifre) {
       return { durum: 'hata', mesaj: 'Ad, soyisim ve şifre girin.' };
     }
-    const allUsers = await usersStore.getAll();
-    setUsers(allUsers);
     const hedef = normalizeAd(`${ad} ${soyad}`);
-    const adaylar = allUsers.filter(
+    const eslesenler = users.filter(
       (u) => normalizeAd(u.adSoyad) === hedef && u.sifre === sifre
     );
 
-    if (adaylar.length === 0) {
+    if (eslesenler.length === 0) {
       return { durum: 'hata', mesaj: 'Ad, soyisim ya da şifre hatalı.' };
     }
-    if (adaylar.length === 1) {
-      await oturumAc(adaylar[0]);
+
+    const onayliOlanlar = eslesenler.filter((u) => u.onayli !== false);
+    if (onayliOlanlar.length === 0) {
+      return {
+        durum: 'hata',
+        mesaj: 'Kaydınız henüz köy yöneticisi tarafından onaylanmadı.',
+      };
+    }
+    if (onayliOlanlar.length === 1) {
+      await oturumAc(onayliOlanlar[0]);
       return { durum: 'basarili' };
     }
-    return { durum: 'coklu-eslesme', adaylar };
+    return { durum: 'coklu-eslesme', adaylar: onayliOlanlar };
   };
 
   const girisSecimiYap: AuthContextValue['girisSecimiYap'] = async (userId) => {
-    const allUsers = await usersStore.getAll();
-    const secilen = allUsers.find((u) => u.id === userId);
+    const secilen = users.find((u) => u.id === userId);
     if (!secilen) return;
     await oturumAc(secilen);
   };
@@ -105,9 +165,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (sifre.length < 4) {
       return { ok: false, hata: 'Şifre en az 4 karakter olmalı.' };
     }
-    const allUsers = await usersStore.getAll();
-    // Kayıt olan herkes sade "kullanıcı"dır. Unvan (Muhtar dahil) yalnızca
-    // admin tarafından, uygulama içinden sonradan atanır.
+    // Kayıt olan herkes admin onayı bekleyen sade "kullanıcı"dır. Unvan
+    // (Muhtar dahil) yalnızca admin tarafından sonradan atanır.
     const newUser: User = {
       id: `user-${Date.now()}`,
       adSoyad: `${ad.trim()} ${soyad.trim()}`,
@@ -115,11 +174,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       babaAdi: babaAdi.trim() || undefined,
       sifre,
       role: 'kullanici',
+      onayli: false,
     };
-    const updated = [...allUsers, newUser];
-    await usersStore.saveAll(updated);
-    setUsers(updated);
-    await oturumAc(newUser);
+    try {
+      await kullaniciEkle(newUser);
+    } catch (e: any) {
+      return { ok: false, hata: e?.message ?? 'Kayıt sırasında bir hata oluştu.' };
+    }
     return { ok: true };
   };
 
@@ -129,22 +190,34 @@ export function AuthProvider({ children }: PropsWithChildren) {
   };
 
   const setUnvan: AuthContextValue['setUnvan'] = async (userId, unvan) => {
-    const allUsers = await usersStore.getAll();
-    const updated = allUsers.map((u) =>
-      u.id === userId ? { ...u, unvan: unvan.trim() || undefined } : u
-    );
-    await usersStore.saveAll(updated);
-    setUsers(updated);
-    setUser((current) => {
-      if (!current || current.id !== userId) return current;
-      const yeni = updated.find((u) => u.id === userId) ?? current;
-      return yeni;
-    });
+    await kullaniciGuncelle(userId, { unvan: unvan.trim() || undefined });
   };
 
+  const kullaniciOnayla: AuthContextValue['kullaniciOnayla'] = async (userId) => {
+    await kullaniciGuncelle(userId, { onayli: true });
+  };
+
+  const kullaniciReddet: AuthContextValue['kullaniciReddet'] = async (userId) => {
+    await kullaniciSil(userId);
+  };
+
+  const loading = !usersYuklendi;
+
   const value = useMemo(
-    () => ({ user, users, loading, login, girisSecimiYap, register, logout, setUnvan }),
-    [user, users, loading]
+    () => ({
+      user,
+      users,
+      loading,
+      baglantiHatasi,
+      login,
+      girisSecimiYap,
+      register,
+      logout,
+      setUnvan,
+      kullaniciOnayla,
+      kullaniciReddet,
+    }),
+    [user, users, loading, baglantiHatasi]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

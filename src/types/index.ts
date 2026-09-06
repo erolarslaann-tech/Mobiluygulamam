@@ -16,6 +16,13 @@ export interface User {
   role: Role;
   /** Yalnızca admin tarafından atanır/kaldırılır. Boşsa sade köylüdür. */
   unvan?: string;
+  /**
+   * false = admin onayı bekliyor, giriş yapamaz. Kayıt olan herkes false
+   * ile başlar; admin "Yönetim" ekranından onaylar. undefined/true = onaylı
+   * (seed hesaplar direkt onaylı gelir). Aynı ad soyadla ikinci bir hesap
+   * açılmaya çalışıldığında admin bunu görüp gerçek mi taklit mi ayırt eder.
+   */
+  onayli?: boolean;
   pushToken?: string;
 }
 

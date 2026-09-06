@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RoleBadge } from '@/components/RoleBadge';
@@ -8,6 +8,49 @@ import { useAuth } from '@/context/AuthContext';
 import { MUHTAR_UNVANI, type User } from '@/types';
 
 const ONERILEN_UNVANLAR = [MUHTAR_UNVANI, 'İmam', 'Köy Azası', 'Bekçi'];
+
+function OnayBekleyenSatiri({
+  kullanici,
+  onOnayla,
+  onReddet,
+}: {
+  kullanici: User;
+  onOnayla: (userId: string) => void;
+  onReddet: (userId: string) => void;
+}) {
+  const reddetOnaySor = () => {
+    Alert.alert(
+      'Kaydı sil',
+      `${kullanici.adSoyad} adlı kaydı silmek istediğinize emin misiniz? Bu kişi sahte/taklit görünüyorsa ya da yanlış bilgi girildiyse silin.`,
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        { text: 'Sil', style: 'destructive', onPress: () => onReddet(kullanici.id) },
+      ]
+    );
+  };
+
+  return (
+    <View style={[styles.satir, styles.bekleyenSatir]}>
+      <Text style={styles.adSoyad}>{kullanici.adSoyad}</Text>
+      <Text style={styles.detay}>
+        Yaş: {kullanici.yas}
+        {kullanici.babaAdi ? `  ·  Baba Adı: ${kullanici.babaAdi}` : ''}
+      </Text>
+      <Text style={styles.uyariText}>
+        Aynı isimde onaylı başka biri varsa, gerçekten farklı bir kişi mi
+        kontrol edin (yaş/baba adına bakın).
+      </Text>
+      <View style={styles.formSatir}>
+        <Pressable style={styles.onaylaButon} onPress={() => onOnayla(kullanici.id)}>
+          <Text style={styles.kaydetText}>Onayla</Text>
+        </Pressable>
+        <Pressable style={styles.reddetButon} onPress={reddetOnaySor}>
+          <Text style={styles.reddetText}>Sil</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
 
 function KullaniciSatiri({
   kullanici,
@@ -61,34 +104,56 @@ function KullaniciSatiri({
 }
 
 export default function YonetimScreen() {
-  const { user, users, setUnvan } = useAuth();
+  const { user, users, setUnvan, kullaniciOnayla, kullaniciReddet } = useAuth();
 
   if (!user || user.role !== 'admin') {
     return null;
   }
 
-  const digerKullanicilar = users
-    .filter((u) => u.role !== 'admin')
+  const onayBekleyenler = users
+    .filter((u) => u.onayli === false)
+    .sort((a, b) => a.adSoyad.localeCompare(b.adSoyad, 'tr'));
+
+  const onayliKullanicilar = users
+    .filter((u) => u.role !== 'admin' && u.onayli !== false)
     .sort((a, b) => a.adSoyad.localeCompare(b.adSoyad, 'tr'));
 
   return (
     <SafeAreaView style={styles.safe} edges={['left', 'right']}>
       <FlatList
-        data={digerKullanicilar}
+        data={onayliKullanicilar}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListHeaderComponent={
-          <Text style={styles.aciklama}>
-            Kullanıcılara unvan verin ya da geri alın. Yalnızca "Muhtar" unvanı
-            olan kişi "Duyurular" sekmesinden resmi duyuru paylaşabilir; diğer
-            unvanlar sadece profilde görünen bir etikettir.
-          </Text>
+          <View>
+            {onayBekleyenler.length > 0 ? (
+              <View style={styles.bekleyenBolum}>
+                <Text style={styles.bolumBaslik}>
+                  Onay Bekleyen Kayıtlar ({onayBekleyenler.length})
+                </Text>
+                {onayBekleyenler.map((aday) => (
+                  <OnayBekleyenSatiri
+                    key={aday.id}
+                    kullanici={aday}
+                    onOnayla={kullaniciOnayla}
+                    onReddet={kullaniciReddet}
+                  />
+                ))}
+              </View>
+            ) : null}
+            <Text style={styles.aciklama}>
+              Kullanıcılara unvan verin ya da geri alın. Yalnızca "Muhtar"
+              unvanı olan kişi "Duyurular" sekmesinden resmi duyuru
+              paylaşabilir; diğer unvanlar sadece profilde görünen bir
+              etikettir.
+            </Text>
+          </View>
         }
         renderItem={({ item }) => (
           <KullaniciSatiri kullanici={item} onUnvanKaydet={setUnvan} />
         )}
         ListEmptyComponent={
-          <Text style={styles.bosText}>Henüz kayıtlı köylü yok.</Text>
+          <Text style={styles.bosText}>Henüz onaylı köylü yok.</Text>
         }
       />
     </SafeAreaView>
@@ -187,6 +252,43 @@ const styles = StyleSheet.create({
   },
   kaydetText: {
     color: '#fff',
+    fontWeight: '700',
+  },
+  bekleyenBolum: {
+    marginBottom: Spacing.lg,
+  },
+  bolumBaslik: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.danger,
+    marginBottom: Spacing.sm,
+  },
+  bekleyenSatir: {
+    borderColor: Colors.accent,
+    borderWidth: 2,
+  },
+  uyariText: {
+    fontSize: 12,
+    color: Colors.accent,
+    fontStyle: 'italic',
+  },
+  onaylaButon: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.sm,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+  },
+  reddetButon: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: Colors.danger,
+    borderRadius: Radius.sm,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+  },
+  reddetText: {
+    color: Colors.danger,
     fontWeight: '700',
   },
 });

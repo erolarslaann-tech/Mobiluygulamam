@@ -24,6 +24,7 @@ export default function RegisterScreen() {
   const [sifre, setSifre] = useState('');
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);
+  const [kayitTamam, setKayitTamam] = useState(false);
 
   const kayitOl = async () => {
     setHata(null);
@@ -34,8 +35,28 @@ export default function RegisterScreen() {
       setHata(sonuc.hata ?? 'Kayıt olunamadı.');
       return;
     }
-    router.replace('/(tabs)');
+    setKayitTamam(true);
   };
+
+  if (kayitTamam) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+        <View style={styles.container}>
+          <Text style={styles.onaySembol}>✓</Text>
+          <Text style={styles.onayBaslik}>Kaydınız alındı</Text>
+          <Text style={styles.aciklama}>
+            Köy yöneticisi kaydınızı onayladıktan sonra Ad, Soyad ve
+            şifrenizle giriş yapabilirsiniz. Aynı isimde başka biri varsa
+            karışıklık olmasın diye yönetici gerekirse sizinle iletişime
+            geçebilir.
+          </Text>
+          <Pressable style={styles.buton} onPress={() => router.replace('/login')}>
+            <Text style={styles.butonText}>Girişe Dön</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
@@ -124,6 +145,19 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontSize: 15,
     lineHeight: 21,
+    marginBottom: Spacing.sm,
+  },
+  onaySembol: {
+    fontSize: 56,
+    textAlign: 'center',
+    color: Colors.primary,
+    marginTop: Spacing.xl,
+  },
+  onayBaslik: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: Colors.text,
+    textAlign: 'center',
     marginBottom: Spacing.sm,
   },
   label: {

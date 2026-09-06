@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 
+import { useAuth } from '@/context/AuthContext';
+import { gonderiEkle, gonderiGuncelle, gonderileriDinle, yorumEkle, yorumlariDinle } from '@/services/firestoreRepo';
 import { bildirimGoster } from '@/services/notifications';
-import { commentsStore, postsStore } from '@/services/storage';
 import type { Comment, Post, PostType } from '@/types';
 
 interface YeniPostGirdisi {
@@ -28,18 +29,37 @@ interface PostsContextValue {
 const PostsContext = createContext<PostsContextValue | undefined>(undefined);
 
 export function PostsProvider({ children }: PropsWithChildren) {
+  // Firestore güvenlik kuralları giriş yapmış (anonim de olsa) istemci
+  // ister; AuthContext hazır olana kadar bekliyoruz.
+  const { loading: authHazirDegil } = useAuth();
+
   const [posts, setPosts] = useState<Post[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [postsYuklendi, setPostsYuklendi] = useState(false);
+  const [commentsYuklendi, setCommentsYuklendi] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      const [p, c] = await Promise.all([postsStore.getAll(), commentsStore.getAll()]);
-      setPosts(p);
-      setComments(c);
-      setLoading(false);
-    })();
-  }, []);
+    if (authHazirDegil) return;
+
+    const kaldirPosts = gonderileriDinle(
+      (p) => {
+        setPosts(p);
+        setPostsYuklendi(true);
+      },
+      () => setPostsYuklendi(true)
+    );
+    const kaldirComments = yorumlariDinle(
+      (c) => {
+        setComments(c);
+        setCommentsYuklendi(true);
+      },
+      () => setCommentsYuklendi(true)
+    );
+    return () => {
+      kaldirPosts();
+      kaldirComments();
+    };
+  }, [authHazirDegil]);
 
   const addPost: PostsContextValue['addPost'] = async (girdi) => {
     const yeni: Post = {
@@ -48,9 +68,7 @@ export function PostsProvider({ children }: PropsWithChildren) {
       createdAt: new Date().toISOString(),
       ...girdi,
     };
-    const updated = [yeni, ...posts];
-    setPosts(updated);
-    await postsStore.saveAll(updated);
+    await gonderiEkle(yeni);
 
     if (yeni.type === 'duyuru') {
       bildirimGoster('Yeni Muhtar Duyurusu', yeni.baslik);
@@ -58,18 +76,13 @@ export function PostsProvider({ children }: PropsWithChildren) {
   };
 
   const toggleLike: PostsContextValue['toggleLike'] = async (postId, userId) => {
-    const updated = posts.map((p) => {
-      if (p.id !== postId) return p;
-      const begeniyorMu = p.begenenler.includes(userId);
-      return {
-        ...p,
-        begenenler: begeniyorMu
-          ? p.begenenler.filter((id) => id !== userId)
-          : [...p.begenenler, userId],
-      };
-    });
-    setPosts(updated);
-    await postsStore.saveAll(updated);
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+    const begeniyorMu = post.begenenler.includes(userId);
+    const yeniBegenenler = begeniyorMu
+      ? post.begenenler.filter((id) => id !== userId)
+      : [...post.begenenler, userId];
+    await gonderiGuncelle(postId, { begenenler: yeniBegenenler });
   };
 
   const addComment: PostsContextValue['addComment'] = async (postId, userId, adSoyad, icerik) => {
@@ -81,15 +94,15 @@ export function PostsProvider({ children }: PropsWithChildren) {
       icerik,
       createdAt: new Date().toISOString(),
     };
-    const updated = [...comments, yeni];
-    setComments(updated);
-    await commentsStore.saveAll(updated);
+    await yorumEkle(yeni);
   };
 
   const commentsForPost: PostsContextValue['commentsForPost'] = (postId) =>
     comments
       .filter((c) => c.postId === postId)
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+  const loading = authHazirDegil || !postsYuklendi || !commentsYuklendi;
 
   const value = useMemo(
     () => ({ posts, comments, loading, addPost, toggleLike, addComment, commentsForPost }),

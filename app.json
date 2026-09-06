@@ -8,9 +8,11 @@
     "scheme": "koyum",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ortacikoy.koyum"
     },
     "android": {
+      "package": "com.ortacikoy.koyum",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
