@@ -1,15 +1,27 @@
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
+/**
+ * Expo Go içinde (SDK 53'ten beri) gerçek/uzak push bildirimleri
+ * desteklenmiyor — denemek anında hata fırlatıyor. Bu MVP henüz Expo Go
+ * ile test edildiği için, Expo Go içindeysek bildirim API'lerine hiç
+ * dokunmuyoruz; gerçek bir derleme (development/production build) alınca
+ * bu kod otomatik olarak devreye girer.
+ */
+const expoGoIcinde = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+if (!expoGoIcinde) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 /**
  * Bildirim izni ister ve bu cihaz için bir Expo push token'ı döndürür.
@@ -18,6 +30,8 @@ Notifications.setNotificationHandler({
  * yalnızca kullanıcı kaydına ekleniyor, gönderim yapılmıyor.
  */
 export async function registerForPushNotificationsAsync(): Promise<string | undefined> {
+  if (expoGoIcinde) return undefined;
+
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('duyurular', {
       name: 'Muhtar Duyuruları',
@@ -53,8 +67,13 @@ export async function registerForPushNotificationsAsync(): Promise<string | unde
  * token'larına bildirim yollamalıdır.
  */
 export async function bildirimGoster(baslik: string, govde: string) {
-  await Notifications.scheduleNotificationAsync({
-    content: { title: baslik, body: govde },
-    trigger: null,
-  });
+  if (expoGoIcinde) return;
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: { title: baslik, body: govde },
+      trigger: null,
+    });
+  } catch {
+    // Bildirim gösterilemezse sessizce yut — kritik bir işlev değil.
+  }
 }
