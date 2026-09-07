@@ -1,27 +1,15 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
-import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 /**
- * Expo Go içinde (SDK 53'ten beri) gerçek/uzak push bildirimleri
- * desteklenmiyor — denemek anında hata fırlatıyor. Bu MVP henüz Expo Go
- * ile test edildiği için, Expo Go içindeysek bildirim API'lerine hiç
- * dokunmuyoruz; gerçek bir derleme (development/production build) alınca
- * bu kod otomatik olarak devreye girer.
+ * Expo Go içinde (SDK 53'ten beri) 'expo-notifications' paketini
+ * İÇE AKTARMAK bile hata fırlatıyor — sadece belirli API'leri çağırmak
+ * değil. Bu yüzden bu paketi normal `import` ile değil, yalnızca Expo
+ * Go dışındayken (gerçek bir development/production derlemesinde)
+ * çalışan fonksiyonların İÇİNDE `require` ile geç yüklüyoruz. Böylece
+ * Expo Go'dayken bu paketin kodu hiç çalıştırılmıyor.
  */
 const expoGoIcinde = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-
-if (!expoGoIcinde) {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: false,
-      shouldSetBadge: false,
-    }),
-  });
-}
 
 /**
  * Bildirim izni ister ve bu cihaz için bir Expo push token'ı döndürür.
@@ -31,6 +19,18 @@ if (!expoGoIcinde) {
  */
 export async function registerForPushNotificationsAsync(): Promise<string | undefined> {
   if (expoGoIcinde) return undefined;
+
+  const Device = require('expo-device') as typeof import('expo-device');
+  const Notifications = require('expo-notifications') as typeof import('expo-notifications');
+
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    }),
+  });
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('duyurular', {
@@ -69,6 +69,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | unde
 export async function bildirimGoster(baslik: string, govde: string) {
   if (expoGoIcinde) return;
   try {
+    const Notifications = require('expo-notifications') as typeof import('expo-notifications');
     await Notifications.scheduleNotificationAsync({
       content: { title: baslik, body: govde },
       trigger: null,
