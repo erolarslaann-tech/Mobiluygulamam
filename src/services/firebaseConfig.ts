@@ -18,12 +18,12 @@ import { getReactNativePersistence } from '@firebase/auth';
  * gerçek güvenlik Firestore Security Rules ile sağlanır (bkz. firestore.rules).
  */
 const firebaseConfig = {
-  apiKey: 'BURAYA_YAPISTIR',
-  authDomain: 'BURAYA_YAPISTIR.firebaseapp.com',
-  projectId: 'BURAYA_YAPISTIR',
-  storageBucket: 'BURAYA_YAPISTIR.appspot.com',
-  messagingSenderId: 'BURAYA_YAPISTIR',
-  appId: 'BURAYA_YAPISTIR',
+  apiKey: 'AIzaSyCR8DrKiTbs2ow--uhLnvO-Ytw33E2eS-A',
+  authDomain: 'ortaci.firebaseapp.com',
+  projectId: 'ortaci',
+  storageBucket: 'ortaci.firebasestorage.app',
+  messagingSenderId: '577580358060',
+  appId: '1:577580358060:web:527710a70df21091318209',
 };
 
 export const firebaseYapilandirildiMi = firebaseConfig.apiKey !== 'BURAYA_YAPISTIR';
