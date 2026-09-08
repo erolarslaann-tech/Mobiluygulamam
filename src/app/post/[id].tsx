@@ -69,7 +69,7 @@ export default function PostDetayScreen() {
                   post.type === 'duyuru' ? styles.pillDuyuru : styles.pillEtkinlik,
                 ]}>
                 <Text style={styles.pillText}>
-                  {post.type === 'duyuru' ? 'DUYURU' : 'DAVETİYE'}
+                  {post.type === 'duyuru' ? 'DUYURU' : (post.davetTuru ?? 'DAVETİYE').toLocaleUpperCase('tr-TR')}
                 </Text>
               </View>
 
@@ -81,9 +81,17 @@ export default function PostDetayScreen() {
               {post.type === 'etkinlik' && (post.etkinlikTarihi || post.konum) ? (
                 <View style={styles.etkinlikKutu}>
                   {post.etkinlikTarihi ? (
-                    <Text style={styles.etkinlikText}>📅 {post.etkinlikTarihi}</Text>
+                    <Text style={styles.etkinlikText}>📅 {formatTarih(post.etkinlikTarihi)}</Text>
                   ) : null}
                   {post.konum ? <Text style={styles.etkinlikText}>📍 {post.konum}</Text> : null}
+                  {post.detaylar && Object.keys(post.detaylar).length > 0
+                    ? Object.entries(post.detaylar).map(([etiket, deger]) => (
+                        <Text key={etiket} style={styles.detaySatiri}>
+                          <Text style={styles.detayEtiket}>{etiket}: </Text>
+                          {deger}
+                        </Text>
+                      ))
+                    : null}
                 </View>
               ) : null}
 
@@ -180,6 +188,13 @@ const styles = StyleSheet.create({
   etkinlikText: {
     color: Colors.accent,
     fontWeight: '600',
+  },
+  detaySatiri: {
+    color: Colors.text,
+    fontSize: 14,
+  },
+  detayEtiket: {
+    fontWeight: '700',
   },
   icerik: {
     fontSize: 16,

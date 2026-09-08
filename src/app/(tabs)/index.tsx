@@ -1,46 +1,88 @@
 import { router } from 'expo-router';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PostCard } from '@/components/PostCard';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/context/PostsContext';
-import { canPostDuyuru } from '@/utils/yetki';
 
-export default function DuyurularScreen() {
-  const { user } = useAuth();
-  const { posts, commentsForPost, loading } = usePosts();
+function gunSelamlamasi() {
+  const saat = new Date().getHours();
+  if (saat < 6) return 'İyi geceler';
+  if (saat < 12) return 'Günaydın';
+  if (saat < 18) return 'İyi günler';
+  return 'İyi akşamlar';
+}
 
-  const duyurular = posts
+export default function AnaSayfaScreen() {
+  const { user, users } = useAuth();
+  const { posts, comments } = usePosts();
+
+  if (!user) return null;
+
+  const sonDuyuru = posts
     .filter((p) => p.type === 'duyuru')
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  const sonDavetiye = posts
+    .filter((p) => p.type === 'etkinlik')
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+
+  const onayBekleyenSayisi = users.filter((u) => u.onayli === false).length;
+  const ad = user.adSoyad.split(' ')[0];
 
   return (
     <SafeAreaView style={styles.safe} edges={['left', 'right']}>
-      <FlatList
-        data={duyurular}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <PostCard post={item} yorumSayisi={commentsForPost(item.id).length} />
-        )}
-        ListEmptyComponent={
-          !loading ? (
-            <View style={styles.bosDurum}>
-              <Text style={styles.bosText}>Henüz duyuru yok.</Text>
-            </View>
-          ) : null
-        }
-      />
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.selamlama}>
+          {gunSelamlamasi()}, {ad}!
+        </Text>
+        <Text style={styles.altBaslik}>Ortacı köyünden son gelişmeler burada.</Text>
 
-      {canPostDuyuru(user) ? (
-        <Pressable
-          style={styles.fab}
-          onPress={() => router.push({ pathname: '/post/new', params: { type: 'duyuru' } })}>
-          <Text style={styles.fabText}>+ Duyuru Ekle</Text>
-        </Pressable>
-      ) : null}
+        {user.role === 'admin' && onayBekleyenSayisi > 0 ? (
+          <Pressable
+            style={styles.uyariKart}
+            onPress={() => router.push('/(tabs)/yonetim')}>
+            <Text style={styles.uyariText}>
+              {onayBekleyenSayisi} kişi onayınızı bekliyor → Yönetim'e git
+            </Text>
+          </Pressable>
+        ) : null}
+
+        <View style={styles.bolum}>
+          <View style={styles.bolumBaslikSatiri}>
+            <Text style={styles.bolumBaslik}>Son Duyuru</Text>
+            <Pressable onPress={() => router.push('/(tabs)/duyurular')}>
+              <Text style={styles.tumunuGor}>Tümünü gör</Text>
+            </Pressable>
+          </View>
+          {sonDuyuru ? (
+            <PostCard
+              post={sonDuyuru}
+              yorumSayisi={comments.filter((c) => c.postId === sonDuyuru.id).length}
+            />
+          ) : (
+            <Text style={styles.bosText}>Henüz duyuru yok.</Text>
+          )}
+        </View>
+
+        <View style={styles.bolum}>
+          <View style={styles.bolumBaslikSatiri}>
+            <Text style={styles.bolumBaslik}>Son Davetiye</Text>
+            <Pressable onPress={() => router.push('/(tabs)/etkinlikler')}>
+              <Text style={styles.tumunuGor}>Tümünü gör</Text>
+            </Pressable>
+          </View>
+          {sonDavetiye ? (
+            <PostCard
+              post={sonDavetiye}
+              yorumSayisi={comments.filter((c) => c.postId === sonDavetiye.id).length}
+            />
+          ) : (
+            <Text style={styles.bosText}>Henüz davetiye yok.</Text>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -50,34 +92,54 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  list: {
+  container: {
     padding: Spacing.md,
-    paddingBottom: Spacing.xl * 2,
+    paddingBottom: Spacing.xl,
+    gap: Spacing.sm,
   },
-  bosDurum: {
+  selamlama: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: Colors.text,
+    marginTop: Spacing.sm,
+  },
+  altBaslik: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginBottom: Spacing.sm,
+  },
+  uyariKart: {
+    backgroundColor: Colors.accent,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  uyariText: {
+    color: '#fff',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  bolum: {
+    marginTop: Spacing.md,
+  },
+  bolumBaslikSatiri: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: Spacing.xl,
+    marginBottom: Spacing.sm,
+  },
+  bolumBaslik: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: Colors.text,
+  },
+  tumunuGor: {
+    fontSize: 13,
+    color: Colors.primary,
+    fontWeight: '600',
   },
   bosText: {
     color: Colors.textMuted,
-  },
-  fab: {
-    position: 'absolute',
-    right: Spacing.md,
-    bottom: Spacing.md,
-    backgroundColor: Colors.accent,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderRadius: Radius.pill,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  fabText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
+    fontStyle: 'italic',
   },
 });

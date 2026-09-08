@@ -40,6 +40,12 @@
           "icon": "./assets/android-icon-foreground.png",
           "color": "#2E6B47"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Profil fotoğrafı seçebilmek için galerine erişim gerekiyor."
+        }
       ]
     ],
     "experiments": {

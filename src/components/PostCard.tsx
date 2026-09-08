@@ -15,7 +15,9 @@ export function PostCard({ post, yorumSayisi }: { post: Post; yorumSayisi: numbe
       <Pressable style={styles.card}>
         <View style={styles.headerRow}>
           <View style={[styles.pill, post.type === 'duyuru' ? styles.pillDuyuru : styles.pillEtkinlik]}>
-            <Text style={styles.pillText}>{post.type === 'duyuru' ? 'DUYURU' : 'DAVETİYE'}</Text>
+            <Text style={styles.pillText}>
+              {post.type === 'duyuru' ? 'DUYURU' : (post.davetTuru ?? 'DAVETİYE').toLocaleUpperCase('tr-TR')}
+            </Text>
           </View>
           <Text style={styles.tarih}>{formatTarih(post.createdAt)}</Text>
         </View>
@@ -26,7 +28,10 @@ export function PostCard({ post, yorumSayisi }: { post: Post; yorumSayisi: numbe
         </Text>
 
         {post.type === 'etkinlik' && post.etkinlikTarihi ? (
-          <Text style={styles.meta}>📅 {post.etkinlikTarihi}{post.konum ? `  ·  📍 ${post.konum}` : ''}</Text>
+          <Text style={styles.meta}>
+            📅 {formatTarih(post.etkinlikTarihi)}
+            {post.konum ? `  ·  📍 ${post.konum}` : ''}
+          </Text>
         ) : null}
 
         <View style={styles.footerRow}>

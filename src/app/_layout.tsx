@@ -27,6 +27,10 @@ export default function RootLayout() {
               name="post/new"
               options={{ title: 'Yeni Paylaşım', presentation: 'modal' }}
             />
+            <Stack.Screen
+              name="profil-duzenle"
+              options={{ title: 'Profili Düzenle', presentation: 'modal' }}
+            />
           </Stack>
         </PostsProvider>
       </AuthProvider>

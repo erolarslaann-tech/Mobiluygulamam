@@ -4,14 +4,16 @@ import type { PropsWithChildren } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { gonderiEkle, gonderiGuncelle, gonderileriDinle, yorumEkle, yorumlariDinle } from '@/services/firestoreRepo';
 import { bildirimGoster } from '@/services/notifications';
-import type { Comment, Post, PostType } from '@/types';
+import type { Comment, DavetTuru, Post, PostType } from '@/types';
 
 interface YeniPostGirdisi {
   type: PostType;
+  davetTuru?: DavetTuru;
   baslik: string;
   icerik: string;
   etkinlikTarihi?: string;
   konum?: string;
+  detaylar?: Record<string, string>;
   yazanId: string;
   yazanAdSoyad: string;
 }

@@ -1,3 +1,4 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -15,8 +16,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/context/PostsContext';
-import type { PostType } from '@/types';
+import {
+  CENAZE_NAMAZI_CAMILERI,
+  DAVET_TURLERI,
+  DAVET_TURU_ALANLARI,
+  type DavetTuru,
+  type PostType,
+} from '@/types';
 import { canPostDuyuru } from '@/utils/yetki';
+
+function birlestirTarihSaat(tarih: Date, saat: Date) {
+  const sonuc = new Date(tarih);
+  sonuc.setHours(saat.getHours(), saat.getMinutes(), 0, 0);
+  return sonuc;
+}
 
 export default function YeniPaylasimScreen() {
   const { type } = useLocalSearchParams<{ type?: PostType }>();
@@ -27,8 +40,12 @@ export default function YeniPaylasimScreen() {
 
   const [baslik, setBaslik] = useState('');
   const [icerik, setIcerik] = useState('');
-  const [etkinlikTarihi, setEtkinlikTarihi] = useState('');
+  const [davetTuru, setDavetTuru] = useState<DavetTuru | null>(null);
+  const [detaylar, setDetaylar] = useState<Record<string, string>>({});
   const [konum, setKonum] = useState('');
+  const [cenazeCamii, setCenazeCamii] = useState<string | null>(null);
+  const [tarih, setTarih] = useState(new Date());
+  const [saat, setSaat] = useState(new Date());
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);
 
@@ -45,19 +62,48 @@ export default function YeniPaylasimScreen() {
     );
   }
 
+  const davetTuruSec = (yeni: DavetTuru) => {
+    setDavetTuru(yeni);
+    setDetaylar({});
+    setCenazeCamii(null);
+  };
+
   const paylas = async () => {
     setHata(null);
     if (!baslik.trim() || !icerik.trim()) {
       setHata('Başlık ve içerik zorunludur.');
       return;
     }
+    if (postType === 'etkinlik' && !davetTuru) {
+      setHata('Davet türü seçin.');
+      return;
+    }
+    if (postType === 'etkinlik' && davetTuru === 'Cenaze' && !cenazeCamii) {
+      setHata('Cenaze namazının kılınacağı camiyi seçin.');
+      return;
+    }
+
     setGonderiliyor(true);
     await addPost({
       type: postType,
+      davetTuru: postType === 'etkinlik' ? davetTuru ?? undefined : undefined,
       baslik: baslik.trim(),
       icerik: icerik.trim(),
-      etkinlikTarihi: postType === 'etkinlik' ? etkinlikTarihi.trim() || undefined : undefined,
-      konum: postType === 'etkinlik' ? konum.trim() || undefined : undefined,
+      etkinlikTarihi: postType === 'etkinlik' ? birlestirTarihSaat(tarih, saat).toISOString() : undefined,
+      konum:
+        postType === 'etkinlik'
+          ? davetTuru === 'Cenaze'
+            ? cenazeCamii ?? undefined
+            : konum.trim() || undefined
+          : undefined,
+      detaylar:
+        postType === 'etkinlik' && Object.values(detaylar).some((v) => v.trim())
+          ? Object.fromEntries(
+              Object.entries(detaylar)
+                .map(([k, v]) => [k, v.trim()])
+                .filter(([, v]) => v)
+            )
+          : undefined,
       yazanId: user.id,
       yazanAdSoyad: user.adSoyad,
     });
@@ -65,41 +111,114 @@ export default function YeniPaylasimScreen() {
     router.back();
   };
 
+  const alanlar = davetTuru ? DAVET_TURU_ALANLARI[davetTuru] : [];
+
   return (
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
-        <ScrollView contentContainerStyle={styles.container}>
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.baslikMetni}>
             {postType === 'duyuru' ? 'Yeni Duyuru' : 'Yeni Davetiye'}
           </Text>
+
+          {postType === 'etkinlik' ? (
+            <>
+              <Text style={styles.label}>Davet Türü</Text>
+              <View style={styles.chipSatir}>
+                {DAVET_TURLERI.map((tur) => (
+                  <Pressable
+                    key={tur}
+                    style={[styles.chip, davetTuru === tur && styles.chipSecili]}
+                    onPress={() => davetTuruSec(tur)}>
+                    <Text style={[styles.chipText, davetTuru === tur && styles.chipTextSecili]}>
+                      {tur}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          ) : null}
 
           <Text style={styles.label}>Başlık</Text>
           <TextInput
             value={baslik}
             onChangeText={setBaslik}
-            placeholder={postType === 'duyuru' ? 'Örn: Su kesintisi' : 'Örn: Ali ile Zeynep\'in Düğünü'}
+            placeholder={postType === 'duyuru' ? 'Örn: Su kesintisi' : "Örn: Ali ile Zeynep'in Düğünü"}
             style={styles.input}
           />
 
           {postType === 'etkinlik' ? (
             <>
-              <Text style={styles.label}>Tarih / Saat</Text>
-              <TextInput
-                value={etkinlikTarihi}
-                onChangeText={setEtkinlikTarihi}
-                placeholder="Örn: 20 Eylül Pazar, 19:00"
-                style={styles.input}
-              />
+              <Text style={styles.label}>Tarih</Text>
+              <View style={styles.pickerKutu}>
+                <DateTimePicker
+                  value={tarih}
+                  mode="date"
+                  display="spinner"
+                  locale="tr-TR"
+                  onChange={(_e, secilen) => secilen && setTarih(secilen)}
+                />
+              </View>
 
-              <Text style={styles.label}>Konum</Text>
-              <TextInput
-                value={konum}
-                onChangeText={setKonum}
-                placeholder="Örn: Köy Düğün Salonu"
-                style={styles.input}
-              />
+              <Text style={styles.label}>Saat</Text>
+              <View style={styles.pickerKutu}>
+                <DateTimePicker
+                  value={saat}
+                  mode="time"
+                  display="spinner"
+                  is24Hour
+                  locale="tr-TR"
+                  onChange={(_e, secilen) => secilen && setSaat(secilen)}
+                />
+              </View>
+
+              {davetTuru === 'Cenaze' ? (
+                <>
+                  <Text style={styles.label}>Cenaze Namazı Kılınacak Cami</Text>
+                  <View style={styles.chipSatir}>
+                    {CENAZE_NAMAZI_CAMILERI.map((cami) => (
+                      <Pressable
+                        key={cami}
+                        style={[styles.chip, cenazeCamii === cami && styles.chipSecili]}
+                        onPress={() => setCenazeCamii(cami)}>
+                        <Text
+                          style={[styles.chipText, cenazeCamii === cami && styles.chipTextSecili]}>
+                          {cami}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.label}>Konum</Text>
+                  <TextInput
+                    value={konum}
+                    onChangeText={setKonum}
+                    placeholder="Örn: Köy Düğün Salonu"
+                    style={styles.input}
+                  />
+                </>
+              )}
+
+              {alanlar.length > 0 ? (
+                <View style={styles.detayKutu}>
+                  <Text style={styles.detayBaslik}>Ek Bilgiler (istersen boş bırakabilirsin)</Text>
+                  {alanlar.map((alan) => (
+                    <View key={alan}>
+                      <Text style={styles.label}>{alan}</Text>
+                      <TextInput
+                        value={detaylar[alan] ?? ''}
+                        onChangeText={(v) => setDetaylar((mevcut) => ({ ...mevcut, [alan]: v }))}
+                        placeholder={alan}
+                        style={styles.input}
+                      />
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </>
           ) : null}
 
@@ -148,7 +267,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   label: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: Colors.text,
     marginTop: Spacing.sm,
@@ -159,8 +278,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    fontSize: 16,
+    paddingVertical: Spacing.md,
+    fontSize: 18,
   },
   textArea: {
     minHeight: 120,
@@ -168,13 +287,13 @@ const styles = StyleSheet.create({
   },
   hataText: {
     color: Colors.danger,
-    fontSize: 13,
+    fontSize: 14,
     marginTop: Spacing.sm,
   },
   buton: {
     backgroundColor: Colors.primary,
     borderRadius: Radius.sm,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.md + 2,
     alignItems: 'center',
     marginTop: Spacing.lg,
   },
@@ -184,6 +303,54 @@ const styles = StyleSheet.create({
   butonText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: 18,
+  },
+  chipSatir: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.xs,
+  },
+  chip: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.surface,
+  },
+  chipSecili: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  chipText: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  chipTextSecili: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  pickerKutu: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  detayKutu: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.md,
+    gap: Spacing.xs,
+  },
+  detayBaslik: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textMuted,
+    marginBottom: Spacing.xs,
   },
 });

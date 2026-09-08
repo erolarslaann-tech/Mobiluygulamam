@@ -42,6 +42,10 @@ interface AuthContextValue {
   kullaniciOnayla: (userId: string) => Promise<void>;
   /** Sadece admin: sahte/yanlış bir kaydı tamamen siler. */
   kullaniciReddet: (userId: string) => Promise<void>;
+  /** Giriş yapmış kullanıcı kendi bilgilerini (ad, yaş, baba adı, foto) günceller. */
+  profilGuncelle: (
+    degisiklik: Partial<Pick<User, 'adSoyad' | 'yas' | 'babaAdi' | 'profilFoto'>>
+  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -201,6 +205,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await kullaniciSil(userId);
   };
 
+  const profilGuncelle: AuthContextValue['profilGuncelle'] = async (degisiklik) => {
+    if (!user) return;
+    await kullaniciGuncelle(user.id, degisiklik);
+    setUser((mevcut) => (mevcut ? { ...mevcut, ...degisiklik } : mevcut));
+  };
+
   const loading = !usersYuklendi;
 
   const value = useMemo(
@@ -216,6 +226,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setUnvan,
       kullaniciOnayla,
       kullaniciReddet,
+      profilGuncelle,
     }),
     [user, users, loading, baglantiHatasi]
   );

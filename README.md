@@ -35,6 +35,9 @@ köylünün telefonu aynı duyuru/davetiye listesini görür. Buna ihtiyacın va
    `BURAYA_YAPISTIR` yerlerine yapıştır.
 6. **Firestore Database > Rules** sekmesine bu projedeki `firestore.rules`
    dosyasının içeriğini yapıştırıp "Publish" de.
+7. Profil fotoğrafları için: **Build > Storage** → "Get started" ile
+   Storage'ı etkinleştir, sonra **Storage > Rules** sekmesine bu
+   projedeki `storage.rules` dosyasının içeriğini yapıştırıp "Publish" de.
 
 ### 2. Uygulamayı çalıştır
 
@@ -104,13 +107,22 @@ oluşturulur (hepsi onaylı):
 - Admin'e özel "Yönetim" sekmesi: kayıt onaylama + unvan verme/kaldırma
 - **Firestore ile gerçek zamanlı senkronizasyon** — bir köylünün attığı
   duyuru/davetiye/yorum/beğeni anında tüm cihazlarda görünür
+- **Ana Sayfa** sekmesi: kişisel karşılama, son duyuru/davetiye özeti,
+  admin için onay bekleyen kayıt uyarısı
 - Muhtar unvanlı kişinin duyuruları (Duyurular sekmesi)
-- Davetiye paylaşımı (Davetiyeler sekmesi) — herkes ekleyebilir
+- Davetiye paylaşımı (Davetiyeler sekmesi) — herkes ekleyebilir.
+  Davet türüne göre (Düğün, Nişan, Sünnet Düğünü, Mevlüd, İftar Yemeği,
+  Toplantı, Cenaze, Diğer) özel, hepsi opsiyonel ek bilgi alanları
+  gösterilir (ör. Düğün için Gelin/Damat adları). **Cenaze** türünde
+  konum serbest metin değil, köydeki 4 camiden seçilir. Tarih/saat
+  girişi klavyeyle yazma değil, kaydırmalı (iOS tarzı) seçici ile
+- Profil sekmesinden ad, yaş, baba adı ve profil fotoğrafı düzenlenebilir
+  (fotoğraf Firebase Storage'a yükleniyor)
 - Gönderilere beğeni ve yorum
 - Yeni bir duyuru paylaşıldığında cihazda anlık bildirim (yalnızca
   duyuruyu paylaşan cihazda — bkz. aşağıdaki sınırlama)
 - Köylüler için sade dil, büyük yazı/dokunma alanları, göz yormayan
-  toprak tonu renk paleti
+  toprak tonu renk paleti; açılışta dekoratif bir karşılama ekranı
 
 ## Kalan sınırlama: gerçek push bildirimi
 
@@ -129,18 +141,21 @@ küçük bir köy uygulaması için harcama pratikte sıfıra yakın kalır.
 ```
 src/
   app/            expo-router ekranları (dosya tabanlı yönlendirme)
-    login.tsx, register.tsx
-    (tabs)/       Duyurular, Davetiyeler, Yönetim (sadece admin), Profil
+    login.tsx, register.tsx, profil-duzenle.tsx
+    (tabs)/       Ana Sayfa, Duyurular, Davetiyeler, Yönetim (admin), Profil
     post/[id].tsx Gönderi detayı (beğeni + yorumlar)
-    post/new.tsx  Yeni duyuru/davetiye ekleme formu
-  context/        AuthContext (oturum + onay/unvan yönetimi), PostsContext
+    post/new.tsx  Yeni duyuru/davetiye ekleme formu (davet türüne göre
+                   dinamik alanlar, cenaze camii seçimi, tarih seçici)
+  context/        AuthContext (oturum + onay/unvan/profil yönetimi), PostsContext
   services/       firebaseConfig.ts, firestoreRepo.ts (Firestore erişimi),
+                   storageRepo.ts (profil fotoğrafı yükleme),
                    tohumVeri.ts (ilk demo veri), notifications.ts, storage.ts
                    (sadece "bu cihazda kim giriş yapmıştı" önbelleği)
   utils/          yetki.ts (kim duyuru paylaşabilir mantığı)
-  components/     PostCard, RoleBadge
-  types/          Ortak TypeScript tipleri
-firestore.rules    Firebase Console'a yapıştırılacak güvenlik kuralları
+  components/     PostCard, RoleBadge, AcilisEkrani (açılış ekranı)
+  types/          Ortak TypeScript tipleri (davet türleri, cami listesi dahil)
+firestore.rules    Firebase Console'a yapıştırılacak Firestore güvenlik kuralları
+storage.rules      Firebase Console'a yapıştırılacak Storage güvenlik kuralları
 ```
 
 ## Ertelenen fikirler
@@ -160,11 +175,11 @@ uygulamayı köylülere yayıp kullanıcı kazanmaya odaklanmak için:
 
 Diğer küçük öneriler (hâlâ geçerli, istersen tek tek eklenebilir):
 
-1. **Vefat/taziye duyurusu ayrı kategori** — özel görünüm + herkese
-   anında bildirim; en hassas duyuru türü.
-2. **Duyuru kategorileri/filtre** — Genel, Su-Elektrik, Sağlık, Vefat,
-   Doğum gibi etiketler.
-3. **Önemli telefonlar sayfası** — muhtar, sağlık ocağı, jandarma,
+1. **Duyuru kategorileri/filtre** — Genel, Su-Elektrik, Sağlık, Doğum
+   gibi etiketler (Cenaze artık Davetiyeler içinde özel bir tür olarak
+   var, ama Duyurular tarafında da benzer bir filtre faydalı olabilir).
+2. **Önemli telefonlar sayfası** — muhtar, sağlık ocağı, jandarma,
    nöbetçi eczane numaralarına tek dokunuşla ulaşım.
-4. **Gönderiye fotoğraf ekleme.**
-5. **Büyük yazı / erişilebilirlik modu.**
+3. **Gönderiye (duyuru/davetiye) fotoğraf ekleme** — profil fotoğrafı
+   artık var, aynı Storage altyapısı gönderilere de taşınabilir.
+4. **Büyük yazı / erişilebilirlik modu.**

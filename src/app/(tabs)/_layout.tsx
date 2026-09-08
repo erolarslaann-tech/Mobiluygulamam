@@ -26,6 +26,13 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
+          title: 'Ana Sayfa',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="duyurular"
+        options={{
           title: 'Duyurular',
           tabBarIcon: ({ focused }) => <TabIcon emoji="📢" focused={focused} />,
         }}

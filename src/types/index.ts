@@ -23,6 +23,8 @@ export interface User {
    * açılmaya çalışıldığında admin bunu görüp gerçek mi taklit mi ayırt eder.
    */
   onayli?: boolean;
+  /** Firebase Storage'daki profil fotoğrafının indirme adresi. */
+  profilFoto?: string;
   pushToken?: string;
 }
 
@@ -30,14 +32,56 @@ export const MUHTAR_UNVANI = 'Muhtar';
 
 export type PostType = 'duyuru' | 'etkinlik';
 
+export const DAVET_TURLERI = [
+  'Düğün',
+  'Nişan',
+  'Sünnet Düğünü',
+  'Mevlüd',
+  'İftar Yemeği',
+  'Toplantı',
+  'Cenaze',
+  'Diğer',
+] as const;
+
+export type DavetTuru = (typeof DAVET_TURLERI)[number];
+
+/**
+ * Her davet türü için sorulacak, serbest bırakılabilir (opsiyonel) ek
+ * bilgi alanları. Kullanıcı doldurmak istemezse boş bırakabilir — ör.
+ * anne/baba ile ilişkisi olmayan biri o alanı boş geçebilmeli.
+ */
+export const DAVET_TURU_ALANLARI: Record<DavetTuru, string[]> = {
+  Düğün: ['Gelin Adı', 'Gelinin Annesi', 'Gelinin Babası', 'Damat Adı', 'Damadın Babası'],
+  Nişan: ['Kızın Adı', 'Erkeğin Adı'],
+  'Sünnet Düğünü': ['Çocuğun Adı', "Babasının Adı"],
+  Mevlüd: ['Kimin İçin Okunuyor'],
+  'İftar Yemeği': ['Yemeği Veren Aile'],
+  Toplantı: ['Toplantı Konusu'],
+  Cenaze: ['Vefat Eden'],
+  Diğer: [],
+};
+
+/** Cenaze namazı için köydeki camiler — konum serbest metin değil, bu listeden seçilir. */
+export const CENAZE_NAMAZI_CAMILERI = [
+  'Kışla Köyü Merkez Camii',
+  'Burunören Mah. Camii',
+  'Halı Mah. Camii',
+  'Dal Mah. Camii',
+] as const;
+
 export interface Post {
   id: string;
   type: PostType;
+  /** Yalnızca type 'etkinlik' (Davetiye) olduğunda dolu. */
+  davetTuru?: DavetTuru;
   baslik: string;
   icerik: string;
-  /** Etkinlik gönderileri için: davetin/olayın tarihi (serbest metin, ör. "12 Ekim Cumartesi") */
+  /** Etkinlik/davet tarihi, ISO string (tarih+saat seçiciden gelir). */
   etkinlikTarihi?: string;
+  /** Cenaze dışındaki türler için serbest metin konum. */
   konum?: string;
+  /** Davet türüne özel ek bilgiler (ör. Düğün: Gelin Adı, Damat Adı...). */
+  detaylar?: Record<string, string>;
   yazanId: string;
   yazanAdSoyad: string;
   begenenler: string[];

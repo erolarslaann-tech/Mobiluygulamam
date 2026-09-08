@@ -119,13 +119,6 @@ export default function LoginScreen() {
               ))}
             </View>
           ) : null}
-
-          <View style={styles.demoKutu}>
-            <Text style={styles.demoBaslik}>Demo hesaplar</Text>
-            <Text style={styles.demoText}>Yönetici Hesap — Şifre: admin123</Text>
-            <Text style={styles.demoText}>Ahmet Yılmaz (Muhtar) — Şifre: muhtar123</Text>
-            <Text style={styles.demoText}>Ayşe Demir — Şifre: 123456</Text>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -227,21 +220,6 @@ const styles = StyleSheet.create({
     color: Colors.primaryDark,
   },
   adayDetay: {
-    color: Colors.textMuted,
-    fontSize: 13,
-  },
-  demoKutu: {
-    backgroundColor: '#EFEAD9',
-    borderRadius: Radius.sm,
-    padding: Spacing.md,
-    gap: 2,
-  },
-  demoBaslik: {
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 2,
-  },
-  demoText: {
     color: Colors.textMuted,
     fontSize: 13,
   },

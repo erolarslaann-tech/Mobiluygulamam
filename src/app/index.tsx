@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { AcilisEkrani } from '@/components/AcilisEkrani';
 import { Colors, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { firebaseYapilandirildiMi } from '@/services/firebaseConfig';
@@ -23,12 +24,12 @@ export default function Index() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator color={Colors.primary} size="large" />
+      <View style={styles.flex}>
+        <AcilisEkrani />
         {baglantiHatasi ? (
-          <Text style={styles.hataMetin}>
-            Bağlantı sorunu: {baglantiHatasi}
-          </Text>
+          <View style={styles.hataBandi}>
+            <Text style={styles.hataBandiText}>Bağlantı sorunu: {baglantiHatasi}</Text>
+          </View>
         ) : null}
       </View>
     );
@@ -38,6 +39,9 @@ export default function Index() {
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     alignItems: 'center',
@@ -57,5 +61,18 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  hataBandi: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: Spacing.md,
+  },
+  hataBandiText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontSize: 12,
   },
 });

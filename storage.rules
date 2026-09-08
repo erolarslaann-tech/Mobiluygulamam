@@ -1,0 +1,13 @@
+rules_version = '2';
+
+// Bu dosyayı Firebase Console > Storage > Rules sekmesine yapıştırıp
+// "Yayınla" (Publish) demen yeterli. Profil fotoğrafları için kullanılıyor.
+// (firestore.rules ile aynı güvenlik notu geçerli: küçük, güvenilir bir
+// köy topluluğu için "giriş yapmış herkes yazabilir" seviyesinde.)
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /profil-fotograflari/{dosyaAdi} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

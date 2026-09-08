@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RoleBadge } from '@/components/RoleBadge';
@@ -28,9 +28,13 @@ export default function ProfilScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['left', 'right']}>
       <View style={styles.container}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user.adSoyad.charAt(0).toUpperCase()}</Text>
-        </View>
+        {user.profilFoto ? (
+          <Image source={{ uri: user.profilFoto }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{user.adSoyad.charAt(0).toUpperCase()}</Text>
+          </View>
+        )}
 
         <Text style={styles.adSoyad}>{user.adSoyad}</Text>
         <RoleBadge role={user.role} unvan={user.unvan} />
@@ -38,6 +42,10 @@ export default function ProfilScreen() {
           Yaş: {user.yas}
           {user.babaAdi ? `  ·  Baba Adı: ${user.babaAdi}` : ''}
         </Text>
+
+        <Pressable style={styles.duzenleButon} onPress={() => router.push('/profil-duzenle')}>
+          <Text style={styles.duzenleText}>Profili Düzenle</Text>
+        </Pressable>
 
         {user.role === 'admin' ? (
           <View style={styles.bilgiKutu}>
@@ -106,7 +114,20 @@ const styles = StyleSheet.create({
   detay: {
     color: Colors.textMuted,
     fontSize: 14,
+  },
+  duzenleButon: {
+    marginTop: Spacing.sm,
     marginBottom: Spacing.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  duzenleText: {
+    color: Colors.primary,
+    fontWeight: '700',
+    fontSize: 14,
   },
   bilgiKutu: {
     backgroundColor: Colors.surface,

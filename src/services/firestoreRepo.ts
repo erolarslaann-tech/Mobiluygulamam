@@ -18,6 +18,20 @@ const kullanicilarRef = collection(db, 'kullanicilar');
 const gonderilerRef = collection(db, 'gonderiler');
 const yorumlarRef = collection(db, 'yorumlar');
 
+/**
+ * Firestore, bir alana `undefined` değeri yazılmasına izin vermez (hata
+ * fırlatır). Formlarda boş bırakılan opsiyonel alanlar (ör. konum,
+ * detaylar) `undefined` olarak gelebildiği için, yazmadan önce bu
+ * alanları nesneden tamamen çıkarıyoruz.
+ */
+function undefinedAlanlariCikar<T extends Record<string, unknown>>(veri: T): T {
+  const sonuc = { ...veri };
+  for (const anahtar of Object.keys(sonuc)) {
+    if (sonuc[anahtar] === undefined) delete sonuc[anahtar];
+  }
+  return sonuc;
+}
+
 export function kullanicilariDinle(
   basarili: (users: User[]) => void,
   hata: (e: Error) => void
@@ -53,11 +67,11 @@ export function yorumlariDinle(
 
 export function kullaniciEkle(user: User) {
   const { id, ...veri } = user;
-  return setDoc(doc(kullanicilarRef, id), veri);
+  return setDoc(doc(kullanicilarRef, id), undefinedAlanlariCikar(veri));
 }
 
 export function kullaniciGuncelle(userId: string, degisiklik: Partial<Omit<User, 'id'>>) {
-  return updateDoc(doc(kullanicilarRef, userId), degisiklik);
+  return updateDoc(doc(kullanicilarRef, userId), undefinedAlanlariCikar(degisiklik));
 }
 
 export function kullaniciSil(userId: string) {
@@ -66,16 +80,16 @@ export function kullaniciSil(userId: string) {
 
 export function gonderiEkle(post: Post) {
   const { id, ...veri } = post;
-  return setDoc(doc(gonderilerRef, id), veri);
+  return setDoc(doc(gonderilerRef, id), undefinedAlanlariCikar(veri));
 }
 
 export function gonderiGuncelle(postId: string, degisiklik: Partial<Omit<Post, 'id'>>) {
-  return updateDoc(doc(gonderilerRef, postId), degisiklik);
+  return updateDoc(doc(gonderilerRef, postId), undefinedAlanlariCikar(degisiklik));
 }
 
 export function yorumEkle(comment: Comment) {
   const { id, ...veri } = comment;
-  return setDoc(doc(yorumlarRef, id), veri);
+  return setDoc(doc(yorumlarRef, id), undefinedAlanlariCikar(veri));
 }
 
 /** İlk hiç kullanıcı yoksa (yeni Firebase projesi) demo/seed veri eklemek için. */
